@@ -88,7 +88,14 @@ class DirectionNode:
         
         # Calculate average feature distance for normalization
         avg_feature_distance = (eye_distance + mouth_distance + jaw_distance + eyebrow_distance) / 4
-        
+
+        # Guard against degenerate faces (near-profile / back-facing views) where a
+        # symmetric feature width collapses to ~0. The per-feature normalizations below
+        # divide by these distances, so a zero here raises ZeroDivisionError. Treat such
+        # a face as undetermined instead of crashing the whole prompt.
+        if min(eye_distance, mouth_distance, jaw_distance, eyebrow_distance) <= 1e-6:
+            return ("missing keypoints", -1)
+
         # Calculate nose offset from face center
         nose_offset = nose_tip_x - face_center_x
         nose_offset_ratio = abs(nose_offset) / avg_feature_distance
